@@ -16,6 +16,34 @@
 - 能展示可維運性：metrics、structured logs、trace id、任務延遲與錯誤率。
 - README 能讓面試官在 5 分鐘內理解架構與 trade-off。
 
+## FAANG 面試官評估角度
+
+這個專案要刻意避免「用了很多工具」的表面展示。FAANG 面試官更在意候選人是否能說清楚問題邊界、設計取捨、 failure modes、量化結果，以及當系統規模變大時會如何演進。
+
+面試時應該主動講出以下內容：
+
+- Problem framing：為什麼長時間 AI 任務不能直接在 HTTP request 裡同步執行。
+- Ownership boundary：API server、queue、worker、DB、LLM provider 各自負責什麼。
+- Consistency model：job 狀態、step result、idempotency key 如何避免重複執行造成髒資料。
+- Failure handling：provider timeout、rate limit、worker crash、DB 寫入失敗、queue 重複派送時怎麼處理。
+- Scalability：worker 水平擴充時如何避免同一個 job 被多個 worker 同時處理。
+- Observability：如何從 trace id 找到一次 job 的 API request、queue event、worker step、LLM usage。
+- Cost control：如何計算 token 成本，如何加 quota 或 budget guard。
+- Testing evidence：不是只說「有測試」，而是能指出哪些測試覆蓋狀態機、retry、idempotency、retrieval quality。
+- Trade-off：為什麼 MVP 選 Redis queue，而不是 Kafka；為什麼先用 pgvector，而不是獨立 vector DB。
+- Evolution path：如果流量變成 10 倍，下一步會先擴哪裡、量測什麼、拆什麼。
+
+面試官可能追問：
+
+1. 如果 worker 執行 embedding 成功，但寫入 DB 前 crash，重跑會發生什麼？
+2. 如果 client 用同一個 idempotency key 但 payload 不同，你會回傳什麼？
+3. 如果 LLM provider rate limit，retry policy 怎麼避免雪崩？
+4. 如果 pgvector 查詢變慢，你會先看哪些 metrics？
+5. 如何證明 retrieval quality 變好，而不是只憑感覺？
+6. 如果 queue 裡有 10 萬個 job，priority 與 fairness 怎麼處理？
+7. 哪些資料表需要 index？為什麼？
+8. 這個系統的 SLO 會怎麼定？
+
 ## MVP 範圍
 
 ### 核心功能
@@ -234,6 +262,7 @@ README 應該用繁體中文撰寫，包含：
 - failure modes 與設計取捨。
 - 壓測結果。
 - 面試可講的 senior signals。
+- FAANG 面試官可能追問的問題與回答方向。
 
 ## 里程碑
 
@@ -245,4 +274,3 @@ README 應該用繁體中文撰寫，包含：
 6. 加入 metrics、logs、trace id。
 7. 補齊測試與壓測腳本。
 8. 完成 README、架構圖與面試講稿。
-
