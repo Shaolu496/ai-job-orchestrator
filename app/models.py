@@ -75,7 +75,12 @@ class Document(Base):
     )
     source_name: Mapped[str] = mapped_column(String(255), nullable=False)
     content_hash: Mapped[str] = mapped_column(String(64), nullable=False)
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
+        JSONB,
+        nullable=False,
+        default=dict,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
@@ -98,7 +103,12 @@ class DocumentChunk(Base):
     embedding: Mapped[list[float]] = mapped_column(Vector(8), nullable=False)
     embedding_model: Mapped[str] = mapped_column(String(128), nullable=False)
     token_count: Mapped[int] = mapped_column(Integer, nullable=False)
-    metadata: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    metadata_: Mapped[dict[str, Any]] = mapped_column(
+        "metadata",
+        JSONB,
+        nullable=False,
+        default=dict,
+    )
 
 
 class LlmUsage(Base):
