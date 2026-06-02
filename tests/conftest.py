@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.database import Base, get_session
 from app.main import create_app
+from app.providers.embeddings import FailingEmbeddingProvider, FakeEmbeddingProvider
 
 TEST_DATABASE_URL = os.getenv(
     "TEST_DATABASE_URL",
@@ -39,3 +40,13 @@ def client(db_session: Session) -> Generator[TestClient, None, None]:
     with TestClient(app) as test_client:
         yield test_client
     app.dependency_overrides.clear()
+
+
+@pytest.fixture()
+def fake_embedding_provider() -> FakeEmbeddingProvider:
+    return FakeEmbeddingProvider()
+
+
+@pytest.fixture()
+def failing_embedding_provider() -> FailingEmbeddingProvider:
+    return FailingEmbeddingProvider()
