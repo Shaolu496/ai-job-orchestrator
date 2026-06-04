@@ -25,6 +25,27 @@
 - 可維運性：structured logs、trace id、metrics、錯誤分類。
 - 測試與驗證：unit tests、integration tests、load test。
 
+## 架構圖
+
+```mermaid
+flowchart LR
+    Client["Client / CLI / Dashboard"] --> API["FastAPI API Server"]
+    API --> DB["Postgres + pgvector"]
+    API --> Queue["Redis / Celery Queue"]
+    Queue --> Worker["Celery Worker"]
+    Worker --> DB
+    Worker --> Provider["Embedding Provider"]
+    API --> Logs["Structured Logs"]
+    Worker --> Logs
+```
+
+設計重點：
+
+- API server 只負責 validation、idempotency 與建立 job，不同步執行長時間 AI 任務。
+- Postgres 是 job state、step result、document chunk、LLM usage 的 source of truth。
+- Redis/Celery 負責 dispatch；worker failure 由 retry backoff 與 dead letter 狀態處理。
+- Embedding provider 是可替換介面，測試使用 deterministic fake provider。
+
 ## 面試時要準備回答的問題
 
 1. 如果 worker 做完 embedding 但 DB 寫入前 crash，重跑如何避免重複資料？
@@ -111,6 +132,22 @@ python scripts/load_test.py --jobs 100
 ```
 
 輸出會包含 jobs、failures、elapsed_seconds、jobs_per_second，可作為面試時討論 throughput 與 API 建立任務成本的起點。
+
+也可以用 in-process FastAPI benchmark 測 API/job creation path，不依賴外部 HTTP server：
+
+```powershell
+$env:DATABASE_URL='postgresql+psycopg://postgres:postgres@localhost:55432/ai_jobs'
+$env:BENCHMARK_JOBS='100'
+python scripts/benchmark_jobs.py
+```
+
+本機測試結果：
+
+```text
+{'mode': 'fastapi_testclient', 'jobs': 100, 'failures': 0, 'elapsed_seconds': 1.531, 'jobs_per_second': 65.31}
+```
+
+這個數字只代表 job creation API path 的本機基準，不代表完整 worker ingestion throughput。面試時我會把它當成 baseline，再說明下一步會分別量測 queue depth、worker throughput、provider latency 與 retrieval latency。
 
 ## FAANG 面試講法
 

@@ -1,6 +1,6 @@
 import logging
 
-from app.observability import log_event
+from app.observability import configure_logging, log_event
 
 
 def test_log_event_includes_trace_id_and_fields(caplog):
@@ -20,3 +20,13 @@ def test_log_event_includes_trace_id_and_fields(caplog):
     assert "job_started" in record.message
     assert "job_id=job-1" in record.message
     assert "status=running" in record.message
+
+
+def test_configure_logging_adds_default_trace_id_to_plain_logs(caplog):
+    logger = logging.getLogger("plain_logger")
+    configure_logging()
+
+    with caplog.at_level(logging.INFO):
+        logger.info("plain message")
+
+    assert caplog.records[0].trace_id == "-"
