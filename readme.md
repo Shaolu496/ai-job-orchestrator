@@ -120,3 +120,22 @@ python scripts/load_test.py --jobs 100
 - worker 使用 retry backoff 與 dead letter 狀態處理 transient failure。
 - trace id 串起 API、worker、step、LLM usage，方便排查 production issue。
 - fake embedding provider 讓測試 deterministic，之後可替換成真實 provider。
+
+## 面試講稿
+
+這個專案我會用「AI workload orchestration」來介紹，而不是用「RAG chatbot」來介紹。核心問題是：長時間 AI 任務容易遇到 request timeout、provider rate limit、worker crash、重複送件與成本不可控，所以我把任務建立、狀態儲存、非同步執行與 retrieval 查詢拆成明確邊界。
+
+系統裡 Postgres 是任務狀態的 source of truth，Redis/Celery 只負責派送工作。API 建立 job 時會檢查 idempotency key 與 payload hash，避免 client retry 建出重複任務；worker 執行失敗時會依 attempt count 做 retry backoff，超過上限後進入 dead letter 狀態。
+
+AI 的部分刻意用 provider abstraction 包起來，測試環境使用 deterministic fake embedding，這讓狀態機、ingestion、retrieval 都可以穩定測試。未來要接 OpenAI、Anthropic 或 local embedding model，只需要新增 provider，不需要改 job orchestration 核心。
+
+如果面試官問 scale，我會先看 queue depth、job latency、worker throughput、provider error rate、Postgres query latency，再決定要增加 worker、調整 retry policy、加 quota/budget guard，或把 Redis/Celery 換成 Kafka 類型的 event streaming 架構。
+
+## 可追問題目
+
+1. 如果 worker 做完 embedding 但 DB 寫入前 crash，重跑如何避免重複資料？
+2. 如果 client 重送同一個 idempotency key 但 payload 不同，API 應該如何回應？
+3. 如果 LLM provider rate limit，retry policy 怎麼避免造成雪崩？
+4. 如果 retrieval latency 變慢，會先看哪些 metrics？
+5. 如果 queue 裡有大量高 priority job，如何避免低 priority job starvation？
+6. 什麼時候 Redis/Celery 不夠，需要換成 Kafka 或其他 event streaming？
